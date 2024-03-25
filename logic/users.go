@@ -2,12 +2,13 @@ package logic
 
 import (
 	"context"
+	"crypto/md5"
+	"fmt"
 	"github.com/yumo001/blog1/global"
+	users "github.com/yumo001/blog1/pb/users"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	users "github.com/yumo001/blog1/pb/users"
 )
 
 type UsersServer struct {
@@ -30,7 +31,8 @@ func (UsersServer) Ping(ctx context.Context, in *users.Request) (*users.Response
 
 func (UsersServer) Register(ctx context.Context, in *users.RegisterRequest) (*users.RegisterResponse, error) {
 	var count int64
-	err := global.MysqlDB.Table("users").Where("username = ?", in.User.Name).Count(&count).Error
+
+	err := global.MysqlDB.Table("users").Where("username = ?", in.User.Username).Count(&count).Error
 	if err != nil {
 		return nil, status.Errorf(codes.Unimplemented, "查询失败")
 	}
@@ -48,7 +50,7 @@ func (UsersServer) Register(ctx context.Context, in *users.RegisterRequest) (*us
 
 func (UsersServer) Login(ctx context.Context, in *users.LoginRequest) (*users.LoginResponse, error) {
 	var count int64
-	err := global.MysqlDB.Table("users").Where("username = ?", in.User.Name).Count(&count).Error
+	err := global.MysqlDB.Table("users").Where("username = ?", in.User.Username).Count(&count).Error
 	if err != nil {
 		return nil, status.Errorf(codes.Unimplemented, "查询失败")
 	}
@@ -57,13 +59,32 @@ func (UsersServer) Login(ctx context.Context, in *users.LoginRequest) (*users.Lo
 	}
 
 	var relPwd string
-	err = global.MysqlDB.Table("users").Where("username =?", in.User.Name).Pluck("password", &relPwd).Error
+	err = global.MysqlDB.Table("users").Where("username =?", in.User.Username).Pluck("password", &relPwd).Error
 	if err != nil {
 		return nil, status.Errorf(codes.Unimplemented, "查询失败")
 	}
-	if in.User.Password != relPwd {
+	if encrypted(in.User.Password) != relPwd {
 		return nil, status.Errorf(codes.InvalidArgument, "密码错误")
 	}
 
 	return nil, nil
+}
+
+// 密码加密
+func encrypted(pwd string) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(pwd)))
+}
+
+func (UsersServer) List(ctx context.Context, in *users.ListRequest) (*users.ListResponse, error) {
+
+	var us []*users.User
+	err := global.MysqlDB.Table("users").Find(&us).Error
+	if err != nil {
+		return nil, status.Errorf(codes.Unimplemented, "查询失败")
+	}
+
+	return &users.ListResponse{
+		Users: us,
+	}, nil
+
 }
