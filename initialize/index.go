@@ -102,10 +102,10 @@ func Consul() {
 	asr := api.AgentServiceRegistration{
 		ID:      uuid.New().String(),
 		Name:    "bolg_grpc",
-		Address: GetIp()[2],
+		Address: GetIp()[3],
 		Port:    global.SevConf.RpcPort,
 		Check: &api.AgentServiceCheck{
-			GRPC:                           GetIp()[2] + ":" + strconv.Itoa(global.SevConf.RpcPort),
+			GRPC:                           GetIp()[3] + ":" + strconv.Itoa(global.SevConf.RpcPort),
 			Timeout:                        "5s",
 			Interval:                       "5s",
 			DeregisterCriticalServiceAfter: "10s",
